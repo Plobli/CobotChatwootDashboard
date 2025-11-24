@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #1d4ed8;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 800px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fef3c7;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Cobot Dashboard Test</h1>
+        
+        <div class="controls">
+            <button onclick="sendTestData()">📤 Test-Daten senden</button>
+            <button onclick="sendEmptyData()">❌ Leere Daten senden</button>
+            <button onclick="reloadIframe()">🔄 Neu laden</button>
+        </div>
+        
+        <div class="info">
+            <strong>ℹ️ Hinweis:</strong> Diese Seite simuliert Chatwoot und sendet Test-Kontaktdaten an das Dashboard.
+            Öffne die Browser-Konsole (F12) um Debug-Nachrichten zu sehen.
+        </div>
+        
+        <iframe id="dashboard" src="https://hilfe.lieblingsarbeitsort.de/dashboard/"></iframe>
+    </div>
+
+    <script>
+        const iframe = document.getElementById('dashboard');
+        
+        // Test-Kontaktdaten (Jaqueline Oppermann als Beispiel)
+        const testContactData = {
+            event: 'appContext',
+            data: {
+                contact: {
+                    id: 92,
+                    name: 'Jaqueline Oppermann',
+                    email: 'jaqueline.mentoring@gmail.com',
+                    custom_attributes: {
+                        cobot_id: '9f53b2160c299f9f090109c220466953',
+                        cobot_status: 'Aktiv',
+                        cobot_plan: 'Tagespass & Räume (Basisplan)',
+                        cobot_member_since: '2025/03/26 07:47:40 +0000',
+                        cobot_profile_url: 'https://mitglieder.lieblingsarbeitsort.de/admin/memberships/9f53b2160c299f9f090109c220466953',
+                        cobot_phone: '',
+                        cobot_adresse: 'Jaqueline OppermannMentoring Lutherstr 6\n39112 Magdeburg',
+                        cobot_plan_change_date: '',
+                        cobot_next_invoice_date: '01.12.2025 00:00',
+                        cobot_last_invoice_date: '10.07.2023 00:00',
+                        cobot_last_invoice_amount: '1.19 EUR',
+                        cobot_last_invoice_status: 'Bezahlt',
+                        cobot_last_booking_resource: 'Meetingraum / Raum für Besprechungen',
+                        cobot_last_booking_date: '29.11.2025',
+                        cobot_last_booking_from: '29.11.2025 10:00',
+                        cobot_last_booking_to: '29.11.2025 15:00',
+                        cobot_booking_history: 'Meetingraum / Raum für Besprechungen (29.11.2025 10:00 - 29.11.2025 15:00)',
+                        cobot_cf_zugang_24_stunden: '',
+                        cobot_cf_nachsendeadresse: '',
+                        cobot_cf_firmenbezeichnung_briefkasten: '',
+                        cobot_cf_welcher_fix_desk_wird_genutzt: ''
+                    }
+                }
+            }
+        };
+        
+        function sendTestData() {
+            console.log('Sende Test-Daten an Dashboard:', testContactData);
+            iframe.contentWindow.postMessage(testContactData, '*');
+            alert('✅ Test-Daten gesendet! Prüfe das Dashboard.');
+        }
+        
+        function sendEmptyData() {
+            const emptyData = {
+                event: 'appContext',
+                data: {
+                    contact: {
+                        id: 999,
+                        name: 'Test User',
+                        email: 'test@example.com',
+                        custom_attributes: {}
+                    }
+                }
+            };
+            console.log('Sende leere Daten:', emptyData);
+            iframe.contentWindow.postMessage(emptyData, '*');
+            alert('❌ Leere Daten gesendet (kein cobot_id)');
+        }
+        
+        function reloadIframe() {
+            iframe.src = iframe.src;
+        }
+        
+        // Automatisch Test-Daten nach 2 Sekunden senden
+        setTimeout(() => {
+            console.log('Auto-sending test data...');
+            sendTestData();
+        }, 2000);
+        
+        // Nachrichten vom Dashboard empfangen
+        window.addEventListener('message', (event) => {
+            console.log('Nachricht vom Dashboard empfangen:', event.data);
+        });
+        
+        console.log('Dashboard Test-Seite geladen');
+        console.log('Warte 2 Sekunden, dann werden automatisch Test-Daten gesendet...');
+    </script>
+</body>
+</html>

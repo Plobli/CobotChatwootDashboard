@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cobot Member Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+            color: #1f2937;
+        }
+
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #1f2937;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .stat-sublabel {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 16px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        .info-value {
+            color: #1f2937;
+            text-align: right;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 24px 0 16px 0;
+            color: #1f2937;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .booking-item {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .link {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>📊 Cobot Mitglieds-Dashboard</h1>
+        
+        <div id="loading" class="loading">
+            Lade Mitgliedsdaten...
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="content" style="display: none;">
+            <!-- Statistiken -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Mitgliedsstatus</div>
+                    <div class="stat-value" id="status-badge"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Aktueller Tarif</div>
+                    <div class="stat-value" style="font-size: 20px;" id="plan-name"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Letzte Rechnung</div>
+                    <div class="stat-value" style="font-size: 24px;" id="last-invoice"></div>
+                    <div class="stat-sublabel" id="invoice-status"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Nächste Rechnung</div>
+                    <div class="stat-value" style="font-size: 20px;" id="next-invoice"></div>
+                </div>
+            </div>
+
+            <!-- Mitgliedsinformationen -->
+            <h2 class="section-title">Mitgliedsinformationen</h2>
+            <div class="info-card">
+                <div class="info-row">
+                    <span class="info-label">Mitglied seit</span>
+                    <span class="info-value" id="member-since"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Telefon</span>
+                    <span class="info-value" id="phone"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Adresse</span>
+                    <span class="info-value" id="address"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Cobot Profil</span>
+                    <span class="info-value"><a id="profile-link" class="link" target="_blank">→ Profil öffnen</a></span>
+                </div>
+            </div>
+
+            <!-- Buchungen -->
+            <h2 class="section-title">Aktuelle Buchungen</h2>
+            <div class="info-card">
+                <div class="info-row">
+                    <span class="info-label">Letzte Buchung</span>
+                    <span class="info-value" id="last-booking"></span>
+                </div>
+                <div id="booking-history" style="margin-top: 16px;"></div>
+            </div>
+
+            <!-- Custom Fields -->
+            <h2 class="section-title">Zusätzliche Informationen</h2>
+            <div class="info-card" id="custom-fields">
+                <!-- Wird dynamisch gefüllt -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chatwoot SDK initialisieren
+        window.addEventListener('message', (event) => {
+            console.log('Message received:', event.data);
+            
+            // Chatwoot sendet JSON als String - parsen wenn nötig
+            let data = event.data;
+            if (typeof data === 'string') {
+                try {
+                    data = JSON.parse(data);
+                    console.log('Parsed JSON data:', data);
+                } catch (e) {
+                    console.error('Failed to parse JSON:', e);
+                    return;
+                }
+            }
+            
+            // Chatwoot sendet verschiedene Event-Typen
+            if (data && data.event) {
+                if (data.event === 'appContext' || data.event === 'chatwoot:dashboard-app:context') {
+                    console.log('Processing appContext event');
+                    loadContactData(data.data || data);
+                }
+            }
+        });
+
+        // Daten vom Parent Window anfordern (mehrere Versuche mit verschiedenen Methoden)
+        function requestContext() {
+            console.log('Requesting context from Chatwoot...');
+            
+            // Methode 1: Standard Event
+            window.parent.postMessage({ event: 'getContext' }, '*');
+            
+            // Methode 2: Chatwoot-spezifisch
+            window.parent.postMessage({ 
+                event: 'chatwoot:dashboard-app:request-context' 
+            }, '*');
+            
+            // Methode 3: Direkter Request
+            window.parent.postMessage({ 
+                action: 'frame-ready',
+                event: 'ready'
+            }, '*');
+        }
+
+        // Versuche mehrmals, Context zu bekommen
+        requestContext();
+        setTimeout(requestContext, 500);
+        setTimeout(requestContext, 1000);
+
+        function loadContactData(context) {
+            console.log('Loading contact data:', context);
+            
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const content = document.getElementById('content');
+
+            loading.style.display = 'none';
+
+            // Versuche verschiedene Pfade zu den Kontaktdaten
+            let contact = null;
+            if (context && context.contact) {
+                contact = context.contact;
+            } else if (context && context.conversation && context.conversation.meta && context.conversation.meta.sender) {
+                contact = context.conversation.meta.sender;
+            } else if (context && context.data && context.data.contact) {
+                contact = context.data.contact;
+            }
+
+            if (!contact) {
+                console.error('No contact found in context:', context);
+                showError('Keine Kontaktdaten verfügbar. Bitte Kontakt auswählen.');
+                return;
+            }
+
+            console.log('Contact found:', contact);
+            const attrs = contact.custom_attributes || contact.additional_attributes || {};
+
+            // Prüfen ob Cobot-Daten vorhanden sind
+            console.log('Custom attributes:', attrs);
+            if (!attrs.cobot_id) {
+                console.warn('No cobot_id found');
+                showError('Dieser Kontakt ist nicht mit Cobot verknüpft. Bitte zuerst synchronisieren.');
+                return;
+            }
+
+            console.log('Displaying Cobot data for contact:', attrs.cobot_id);
+            content.style.display = 'block';
+
+            // Status Badge
+            const statusBadge = document.getElementById('status-badge');
+            const status = attrs.cobot_status || 'Unbekannt';
+            const isCanceled = status.includes('Gekündigt');
+            statusBadge.innerHTML = `<span class="badge ${isCanceled ? 'badge-danger' : 'badge-success'}">${status}</span>`;
+
+            // Tarif
+            document.getElementById('plan-name').textContent = attrs.cobot_plan || 'Unbekannt';
+
+            // Letzte Rechnung
+            const lastInvoiceAmount = attrs.cobot_last_invoice_amount || 'N/A';
+            const lastInvoiceStatus = attrs.cobot_last_invoice_status || '';
+            document.getElementById('last-invoice').textContent = lastInvoiceAmount;
+            document.getElementById('invoice-status').textContent = `${attrs.cobot_last_invoice_date || ''} - ${lastInvoiceStatus}`;
+
+            // Nächste Rechnung
+            document.getElementById('next-invoice').textContent = attrs.cobot_next_invoice_date || 'N/A';
+
+            // Mitglied seit
+            const memberSince = attrs.cobot_member_since || '';
+            if (memberSince) {
+                const date = new Date(memberSince);
+                document.getElementById('member-since').textContent = date.toLocaleDateString('de-DE');
+            } else {
+                document.getElementById('member-since').textContent = 'N/A';
+            }
+
+            // Kontaktdaten
+            document.getElementById('phone').textContent = attrs.cobot_phone || 'Nicht angegeben';
+            document.getElementById('address').textContent = attrs.cobot_adresse || 'Nicht angegeben';
+
+            // Profil Link
+            const profileLink = document.getElementById('profile-link');
+            if (attrs.cobot_profile_url) {
+                profileLink.href = attrs.cobot_profile_url;
+            } else {
+                profileLink.style.display = 'none';
+            }
+
+            // Letzte Buchung
+            const lastBooking = attrs.cobot_last_booking_resource || 'Keine Buchungen';
+            const lastBookingDate = attrs.cobot_last_booking_date || '';
+            document.getElementById('last-booking').textContent = lastBooking + (lastBookingDate ? ` am ${lastBookingDate}` : '');
+
+            // Buchungshistorie
+            const historyDiv = document.getElementById('booking-history');
+            const bookingHistory = attrs.cobot_booking_history || '';
+            if (bookingHistory) {
+                const bookings = bookingHistory.split(' | ');
+                historyDiv.innerHTML = '<div style="font-weight: 500; margin-bottom: 8px; color: #6b7280;">Historie:</div>';
+                bookings.forEach(booking => {
+                    const div = document.createElement('div');
+                    div.className = 'booking-item';
+                    div.textContent = booking;
+                    historyDiv.appendChild(div);
+                });
+            } else {
+                historyDiv.innerHTML = '<div style="color: #9ca3af; font-size: 14px;">Keine Buchungshistorie</div>';
+            }
+
+            // Custom Fields
+            const customFieldsDiv = document.getElementById('custom-fields');
+            const customFields = Object.keys(attrs).filter(key => key.startsWith('cobot_cf_'));
+            
+            if (customFields.length > 0) {
+                customFields.forEach(key => {
+                    const label = key.replace('cobot_cf_', '').replace(/_/g, ' ')
+                        .split(' ')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ');
+                    const value = attrs[key] || 'Nicht angegeben';
+                    
+                    const row = document.createElement('div');
+                    row.className = 'info-row';
+                    row.innerHTML = `
+                        <span class="info-label">${label}</span>
+                        <span class="info-value">${value}</span>
+                    `;
+                    customFieldsDiv.appendChild(row);
+                });
+            } else {
+                customFieldsDiv.innerHTML = '<div style="color: #9ca3af; padding: 12px 0;">Keine zusätzlichen Informationen</div>';
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

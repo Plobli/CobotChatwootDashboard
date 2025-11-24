@@ -1,0 +1,12 @@
+{
+  "id": "cobot-member-dashboard",
+  "name": "Cobot Mitglieds-Dashboard",
+  "description": "Zeigt Cobot-Mitgliedsdaten, Tarife, Rechnungen und Buchungen",
+  "icon": "📊",
+  "version": "1.0.0",
+  "location": "contact_sidebar",
+  "content": {
+    "url": "https://hilfe.lieblingsarbeitsort.de/dashboard/",
+    "height": 600
+  }
+}
