@@ -151,6 +151,68 @@
         .link:hover {
             text-decoration: underline;
         }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #1f2937;
+            background: white;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-primary:disabled {
+            background: #93c5fd;
+            cursor: not-allowed;
+        }
+
+        .status-success {
+            color: #059669;
+        }
+
+        .status-error {
+            color: #dc2626;
+        }
     </style>
 </head>
 <body>
@@ -216,10 +278,46 @@
                 <div id="booking-history" style="margin-top: 16px;"></div>
             </div>
 
-            <!-- Custom Fields -->
+            <!-- Custom Fields (nur lesend) -->
             <h2 class="section-title">Zusätzliche Informationen</h2>
             <div class="info-card" id="custom-fields">
                 <!-- Wird dynamisch gefüllt -->
+            </div>
+
+            <!-- Cobot Custom Fields (editierbar) -->
+            <h2 class="section-title">Cobot-Einstellungen bearbeiten</h2>
+            <div class="info-card" id="editable-custom-fields">
+                <div class="form-group">
+                    <label class="form-label">Zugang 24 Stunden</label>
+                    <select id="cf-zugang-24" class="form-input">
+                        <option value="">-- Nicht gesetzt --</option>
+                        <option value="ja">Ja</option>
+                        <option value="nein">Nein</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nachsendeadresse</label>
+                    <input type="text" id="cf-nachsendeadresse" class="form-input" placeholder="Adresse für Postweiterleitung">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Firmenbezeichnung Briefkasten</label>
+                    <input type="text" id="cf-firmenbezeichnung" class="form-input" placeholder="Name auf dem Briefkasten">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Welcher Fix Desk wird genutzt?</label>
+                    <select id="cf-fix-desk" class="form-input">
+                        <option value="">-- Nicht gesetzt --</option>
+                        <option value="Hinten Links">Hinten Links</option>
+                        <option value="Hinten Rechts">Hinten Rechts</option>
+                        <option value="Vorne Links">Vorne Links</option>
+                        <option value="Vorne Rechts">Vorne Rechts</option>
+                        <option value="Flex Desk Raum">Flex Desk Raum</option>
+                    </select>
+                </div>
+                <div style="margin-top: 16px; display: flex; gap: 10px; align-items: center;">
+                    <button id="save-custom-fields" class="btn btn-primary">💾 In Cobot speichern</button>
+                    <span id="save-status" style="font-size: 14px;"></span>
+                </div>
             </div>
         </div>
     </div>
@@ -438,6 +536,12 @@
                 customFieldsDiv.innerHTML = '<div style="color: #9ca3af; padding: 12px 0;">Keine zusätzlichen Informationen</div>';
             }
             
+            // Editierbare Custom Fields befüllen
+            populateEditableFields(data.customFields);
+            
+            // Speichern-Button Event Listener
+            setupSaveButton(data.id);
+            
             // Live-Indikator hinzufügen
             const h1 = document.querySelector('h1');
             if (!document.getElementById('live-indicator')) {
@@ -447,6 +551,86 @@
                 indicator.textContent = '● LIVE';
                 h1.appendChild(indicator);
             }
+        }
+        
+        // Editierbare Felder mit aktuellen Werten befüllen
+        function populateEditableFields(customFields) {
+            if (!customFields) return;
+            
+            // Zugang 24 Stunden
+            const zugang24 = document.getElementById('cf-zugang-24');
+            if (customFields['Zugang 24 Stunden']) {
+                zugang24.value = customFields['Zugang 24 Stunden'].toLowerCase();
+            } else {
+                zugang24.value = '';
+            }
+            
+            // Nachsendeadresse
+            const nachsende = document.getElementById('cf-nachsendeadresse');
+            nachsende.value = customFields['Nachsendeadresse'] || '';
+            
+            // Firmenbezeichnung Briefkasten
+            const firma = document.getElementById('cf-firmenbezeichnung');
+            firma.value = customFields['Firmenbezeichnung Briefkasten'] || '';
+            
+            // Fix Desk
+            const fixDesk = document.getElementById('cf-fix-desk');
+            fixDesk.value = customFields['Welcher Fix Desk wird genutzt?'] || '';
+        }
+        
+        // Speichern-Button Setup
+        let currentMemberId = null;
+        
+        function setupSaveButton(memberId) {
+            currentMemberId = memberId;
+            
+            const saveBtn = document.getElementById('save-custom-fields');
+            const statusSpan = document.getElementById('save-status');
+            
+            // Entferne alte Event Listener
+            const newBtn = saveBtn.cloneNode(true);
+            saveBtn.parentNode.replaceChild(newBtn, saveBtn);
+            
+            newBtn.addEventListener('click', async () => {
+                newBtn.disabled = true;
+                newBtn.textContent = '⏳ Speichern...';
+                statusSpan.textContent = '';
+                statusSpan.className = '';
+                
+                try {
+                    const fields = {
+                        zugang_24_stunden: document.getElementById('cf-zugang-24').value,
+                        nachsendeadresse: document.getElementById('cf-nachsendeadresse').value,
+                        firmenbezeichnung_briefkasten: document.getElementById('cf-firmenbezeichnung').value,
+                        fix_desk: document.getElementById('cf-fix-desk').value
+                    };
+                    
+                    const response = await fetch(`${API_BASE}/api/member/${currentMemberId}/custom_fields`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(fields)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        statusSpan.textContent = '✅ Erfolgreich gespeichert!';
+                        statusSpan.className = 'status-success';
+                    } else {
+                        throw new Error(result.error || 'Speichern fehlgeschlagen');
+                    }
+                    
+                } catch (err) {
+                    console.error('Fehler beim Speichern:', err);
+                    statusSpan.textContent = '❌ ' + err.message;
+                    statusSpan.className = 'status-error';
+                } finally {
+                    newBtn.disabled = false;
+                    newBtn.textContent = '💾 In Cobot speichern';
+                }
+            });
         }
 
         // Fallback: Zeige gecachte Daten aus custom_attributes (alte Methode)

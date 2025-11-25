@@ -234,6 +234,96 @@ app.get('/api/member/:memberId', async (req, res) => {
     }
 });
 
+// ===== API ENDPOINT: Custom Fields zu Cobot schreiben =====
+
+// Cobot Custom Field IDs (aus Space-Konfiguration)
+const COBOT_CUSTOM_FIELD_IDS = {
+    'zugang_24_stunden': 'b799594101de60d2c5904a6a72fd580a',
+    'nachsendeadresse': '3ac66a448db77c40f5bba11379aa5cdd',
+    'firmenbezeichnung_briefkasten': '01e9f41eac032de45ee760dd197d12f7',
+    'fix_desk': 'aeb42929e950a92a4754f3313e44dfba'
+};
+
+app.use(express.json());
+
+app.put('/api/member/:memberId/custom_fields', async (req, res) => {
+    const { memberId } = req.params;
+    const fields = req.body;
+    
+    console.log(`📝 Custom Fields Update für Member: ${memberId}`);
+    console.log('📤 Empfangene Felder:', fields);
+    
+    try {
+        // Felder in Cobot-Format umwandeln
+        const cobotFields = [];
+        
+        if (fields.zugang_24_stunden !== undefined) {
+            cobotFields.push({
+                id: COBOT_CUSTOM_FIELD_IDS.zugang_24_stunden,
+                value: fields.zugang_24_stunden
+            });
+        }
+        
+        if (fields.nachsendeadresse !== undefined) {
+            cobotFields.push({
+                id: COBOT_CUSTOM_FIELD_IDS.nachsendeadresse,
+                value: fields.nachsendeadresse
+            });
+        }
+        
+        if (fields.firmenbezeichnung_briefkasten !== undefined) {
+            cobotFields.push({
+                id: COBOT_CUSTOM_FIELD_IDS.firmenbezeichnung_briefkasten,
+                value: fields.firmenbezeichnung_briefkasten
+            });
+        }
+        
+        if (fields.fix_desk !== undefined) {
+            cobotFields.push({
+                id: COBOT_CUSTOM_FIELD_IDS.fix_desk,
+                value: fields.fix_desk
+            });
+        }
+        
+        if (cobotFields.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Keine gültigen Felder zum Aktualisieren'
+            });
+        }
+        
+        // An Cobot senden
+        const response = await fetch(`${COBOT_BASE_URL}/api/memberships/${memberId}/custom_fields`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${COBOT_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(cobotFields)
+        });
+        
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Cobot API Error: ${response.status} - ${error}`);
+        }
+        
+        const result = await response.json();
+        console.log(`✅ Custom Fields erfolgreich aktualisiert für Member: ${memberId}`);
+        
+        res.json({
+            success: true,
+            data: result
+        });
+        
+    } catch (error) {
+        console.error(`❌ Fehler beim Aktualisieren der Custom Fields:`, error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 app.listen(PORT, () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📊 Cobot Dashboard App');
@@ -241,5 +331,6 @@ app.listen(PORT, () => {
     console.log(`🌐 Dashboard URL: http://localhost:${PORT}`);
     console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
     console.log(`📡 API Endpoint: http://localhost:${PORT}/api/member/:id`);
+    console.log(`📝 Custom Fields: PUT http://localhost:${PORT}/api/member/:id/custom_fields`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 });
