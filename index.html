@@ -225,6 +225,9 @@
     </div>
 
     <script>
+        // Basis-URL für API - Dashboard läuft unter /dashboard/ auf derselben Domain
+        const API_BASE = 'https://hilfe.lieblingsarbeitsort.de/dashboard';
+        
         // Chatwoot SDK initialisieren
         window.addEventListener('message', (event) => {
             console.log('Message received:', event.data);
@@ -245,7 +248,7 @@
             if (data && data.event) {
                 if (data.event === 'appContext' || data.event === 'chatwoot:dashboard-app:context') {
                     console.log('Processing appContext event');
-                    loadContactData(data.data || data);
+                    handleContext(data.data || data);
                 }
             }
         });
@@ -274,14 +277,12 @@
         setTimeout(requestContext, 500);
         setTimeout(requestContext, 1000);
 
-        function loadContactData(context) {
-            console.log('Loading contact data:', context);
+        async function handleContext(context) {
+            console.log('Handling context:', context);
             
             const loading = document.getElementById('loading');
             const error = document.getElementById('error');
             const content = document.getElementById('content');
-
-            loading.style.display = 'none';
 
             // Versuche verschiedene Pfade zu den Kontaktdaten
             let contact = null;
@@ -310,7 +311,152 @@
                 return;
             }
 
-            console.log('Displaying Cobot data for contact:', attrs.cobot_id);
+            // Live-Daten von Cobot abrufen
+            loading.textContent = 'Lade aktuelle Daten von Cobot...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/member/${attrs.cobot_id}`);
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Unbekannter Fehler');
+                }
+                
+                displayLiveData(result.data);
+                
+            } catch (err) {
+                console.error('Fehler beim Abrufen der Live-Daten:', err);
+                // Fallback: Zeige gecachte Daten aus custom_attributes
+                console.log('Fallback zu gecachten Daten...');
+                displayCachedData(attrs);
+            }
+        }
+
+        function displayLiveData(data) {
+            console.log('Displaying live data:', data);
+            
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            
+            loading.style.display = 'none';
+            content.style.display = 'block';
+
+            // Status Badge
+            const statusBadge = document.getElementById('status-badge');
+            statusBadge.innerHTML = `<span class="badge ${data.isCanceled ? 'badge-danger' : 'badge-success'}">${data.status}</span>`;
+
+            // Tarif
+            document.getElementById('plan-name').textContent = data.plan;
+
+            // Letzte Rechnung
+            if (data.lastInvoice) {
+                document.getElementById('last-invoice').textContent = data.lastInvoice.amount;
+                const statusClass = data.lastInvoice.isPaid ? 'badge-success' : 'badge-warning';
+                document.getElementById('invoice-status').innerHTML = `${data.lastInvoice.date} - <span class="badge ${statusClass}">${data.lastInvoice.status}</span>`;
+            } else {
+                document.getElementById('last-invoice').textContent = 'Keine';
+                document.getElementById('invoice-status').textContent = '';
+            }
+
+            // Nächste Rechnung
+            if (data.nextInvoice) {
+                document.getElementById('next-invoice').textContent = `${data.nextInvoice.amount} (fällig ${data.nextInvoice.dueDate})`;
+            } else {
+                document.getElementById('next-invoice').textContent = 'Keine offenen';
+            }
+
+            // Mitglied seit
+            if (data.memberSince) {
+                const date = new Date(data.memberSince);
+                document.getElementById('member-since').textContent = date.toLocaleDateString('de-DE');
+            } else {
+                document.getElementById('member-since').textContent = 'N/A';
+            }
+
+            // Kontaktdaten
+            document.getElementById('phone').textContent = data.phone || 'Nicht angegeben';
+            document.getElementById('address').textContent = data.address || 'Nicht angegeben';
+
+            // Profil Link
+            const profileLink = document.getElementById('profile-link');
+            if (data.profileUrl) {
+                profileLink.href = data.profileUrl;
+                profileLink.style.display = '';
+            } else {
+                profileLink.style.display = 'none';
+            }
+
+            // Letzte Buchung
+            if (data.lastBooking) {
+                document.getElementById('last-booking').textContent = `${data.lastBooking.resource} am ${data.lastBooking.date} um ${data.lastBooking.time}`;
+            } else {
+                document.getElementById('last-booking').textContent = 'Keine Buchungen';
+            }
+
+            // Buchungshistorie
+            const historyDiv = document.getElementById('booking-history');
+            if (data.bookingHistory && data.bookingHistory.length > 0) {
+                historyDiv.innerHTML = `
+                    <div style="font-weight: 500; margin-bottom: 8px; color: #6b7280;">
+                        Letzte 30 Tage: ${data.totalBookingsLast30Days} Buchungen | Kommend: ${data.upcomingBookings}
+                    </div>
+                `;
+                data.bookingHistory.forEach(booking => {
+                    const div = document.createElement('div');
+                    div.className = 'booking-item';
+                    div.textContent = booking;
+                    historyDiv.appendChild(div);
+                });
+            } else {
+                historyDiv.innerHTML = '<div style="color: #9ca3af; font-size: 14px;">Keine Buchungen in den letzten 30 Tagen</div>';
+            }
+
+            // Custom Fields
+            const customFieldsDiv = document.getElementById('custom-fields');
+            customFieldsDiv.innerHTML = '';
+            
+            if (data.customFields && Object.keys(data.customFields).length > 0) {
+                for (const [key, value] of Object.entries(data.customFields)) {
+                    if (value) {
+                        const label = key.replace(/_/g, ' ')
+                            .split(' ')
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ');
+                        
+                        const row = document.createElement('div');
+                        row.className = 'info-row';
+                        row.innerHTML = `
+                            <span class="info-label">${label}</span>
+                            <span class="info-value">${value}</span>
+                        `;
+                        customFieldsDiv.appendChild(row);
+                    }
+                }
+            }
+            
+            if (customFieldsDiv.children.length === 0) {
+                customFieldsDiv.innerHTML = '<div style="color: #9ca3af; padding: 12px 0;">Keine zusätzlichen Informationen</div>';
+            }
+            
+            // Live-Indikator hinzufügen
+            const h1 = document.querySelector('h1');
+            if (!document.getElementById('live-indicator')) {
+                const indicator = document.createElement('span');
+                indicator.id = 'live-indicator';
+                indicator.style.cssText = 'font-size: 12px; background: #10b981; color: white; padding: 4px 8px; border-radius: 12px; margin-left: 10px; vertical-align: middle;';
+                indicator.textContent = '● LIVE';
+                h1.appendChild(indicator);
+            }
+        }
+
+        // Fallback: Zeige gecachte Daten aus custom_attributes (alte Methode)
+        function displayCachedData(attrs) {
+            console.log('Displaying cached data:', attrs);
+            
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            
+            loading.style.display = 'none';
             content.style.display = 'block';
 
             // Status Badge
@@ -323,18 +469,15 @@
             document.getElementById('plan-name').textContent = attrs.cobot_plan || 'Unbekannt';
 
             // Letzte Rechnung
-            const lastInvoiceAmount = attrs.cobot_last_invoice_amount || 'N/A';
-            const lastInvoiceStatus = attrs.cobot_last_invoice_status || '';
-            document.getElementById('last-invoice').textContent = lastInvoiceAmount;
-            document.getElementById('invoice-status').textContent = `${attrs.cobot_last_invoice_date || ''} - ${lastInvoiceStatus}`;
+            document.getElementById('last-invoice').textContent = attrs.cobot_last_invoice_amount || 'N/A';
+            document.getElementById('invoice-status').textContent = `${attrs.cobot_last_invoice_date || ''} - ${attrs.cobot_last_invoice_status || ''}`;
 
             // Nächste Rechnung
             document.getElementById('next-invoice').textContent = attrs.cobot_next_invoice_date || 'N/A';
 
             // Mitglied seit
-            const memberSince = attrs.cobot_member_since || '';
-            if (memberSince) {
-                const date = new Date(memberSince);
+            if (attrs.cobot_member_since) {
+                const date = new Date(attrs.cobot_member_since);
                 document.getElementById('member-since').textContent = date.toLocaleDateString('de-DE');
             } else {
                 document.getElementById('member-since').textContent = 'N/A';
@@ -353,48 +496,25 @@
             }
 
             // Letzte Buchung
-            const lastBooking = attrs.cobot_last_booking_resource || 'Keine Buchungen';
-            const lastBookingDate = attrs.cobot_last_booking_date || '';
-            document.getElementById('last-booking').textContent = lastBooking + (lastBookingDate ? ` am ${lastBookingDate}` : '');
+            document.getElementById('last-booking').textContent = (attrs.cobot_last_booking_resource || 'Keine') + 
+                (attrs.cobot_last_booking_date ? ` am ${attrs.cobot_last_booking_date}` : '');
 
             // Buchungshistorie
             const historyDiv = document.getElementById('booking-history');
-            const bookingHistory = attrs.cobot_booking_history || '';
-            if (bookingHistory) {
-                const bookings = bookingHistory.split(' | ');
-                historyDiv.innerHTML = '<div style="font-weight: 500; margin-bottom: 8px; color: #6b7280;">Historie:</div>';
-                bookings.forEach(booking => {
-                    const div = document.createElement('div');
-                    div.className = 'booking-item';
-                    div.textContent = booking;
-                    historyDiv.appendChild(div);
-                });
-            } else {
-                historyDiv.innerHTML = '<div style="color: #9ca3af; font-size: 14px;">Keine Buchungshistorie</div>';
-            }
+            historyDiv.innerHTML = '<div style="color: #9ca3af; font-size: 14px;">Gecachte Daten - keine Live-Buchungshistorie</div>';
 
             // Custom Fields
             const customFieldsDiv = document.getElementById('custom-fields');
-            const customFields = Object.keys(attrs).filter(key => key.startsWith('cobot_cf_'));
+            customFieldsDiv.innerHTML = '<div style="color: #9ca3af; padding: 12px 0;">Gecachte Daten</div>';
             
-            if (customFields.length > 0) {
-                customFields.forEach(key => {
-                    const label = key.replace('cobot_cf_', '').replace(/_/g, ' ')
-                        .split(' ')
-                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(' ');
-                    const value = attrs[key] || 'Nicht angegeben';
-                    
-                    const row = document.createElement('div');
-                    row.className = 'info-row';
-                    row.innerHTML = `
-                        <span class="info-label">${label}</span>
-                        <span class="info-value">${value}</span>
-                    `;
-                    customFieldsDiv.appendChild(row);
-                });
-            } else {
-                customFieldsDiv.innerHTML = '<div style="color: #9ca3af; padding: 12px 0;">Keine zusätzlichen Informationen</div>';
+            // Cached-Indikator hinzufügen
+            const h1 = document.querySelector('h1');
+            if (!document.getElementById('live-indicator')) {
+                const indicator = document.createElement('span');
+                indicator.id = 'live-indicator';
+                indicator.style.cssText = 'font-size: 12px; background: #f59e0b; color: white; padding: 4px 8px; border-radius: 12px; margin-left: 10px; vertical-align: middle;';
+                indicator.textContent = '⚠ CACHED';
+                h1.appendChild(indicator);
             }
         }
 
